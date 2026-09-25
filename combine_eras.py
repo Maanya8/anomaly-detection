@@ -3,11 +3,11 @@
 Usage:
     python combine_eras.py <data_dir> <output_file>
 
-data_dir holds era1/, era2/, era3/ (or any era* folders) of per-satellite
-JSON files, in whatever shape a pipeline stage left them (a plain list of
-points, or the wrapped {reference_point_count, ..., points} structure).
-The combined file nests them by era and original file stem, so
-split_eras.py can reconstruct every file exactly:
+`data_dir` holds era1/, era2/, and era3/, or any era* folders, of
+per-satellite JSON files. Each file can be a plain list of points or the
+wrapped {reference_point_count, ..., points} structure. The combined file
+nests the files by era and original file stem, so `split_eras.py` can
+rebuild every file exactly:
 
     {"era1": {"1": <content of era1/1.json>, "2": <...>, ...}, "era2": {...}}
 """
@@ -24,9 +24,9 @@ def combine(data_dir, output_file):
     """Read every era*/*.json file under data_dir into the nested
     {era: {stem: content}} structure described above.
 
-    A file that fails to parse is skipped, not fatal: one bad file should
-    not block combining everything else. Skipped files come back
-    separately so the caller can report them.
+    If a file fails to parse, skip it and continue, so one bad file does
+    not stop the rest. The function returns the skipped files separately
+    so the caller can report them.
     """
     data_dir = Path(data_dir)
     combined = {}
@@ -47,7 +47,7 @@ def combine(data_dir, output_file):
 
 def write_combined(combined, output_file):
     # Write to a temp file first so a failure cannot leave a truncated
-    # output_file behind, same pattern the rest of the pipeline uses.
+    # `output_file`.
     output_file = Path(output_file)
     fd, tmp = tempfile.mkstemp(dir=output_file.parent or ".", suffix=".tmp")
     with os.fdopen(fd, "w") as f:
@@ -56,8 +56,8 @@ def write_combined(combined, output_file):
 
 
 def _check():
-    """Combining then splitting a small synthetic era tree (via
-    split_eras.split) reproduces every file's original content exactly."""
+    """Check that combining and then splitting a small synthetic era tree
+    with `split_eras.split` restores every file's content exactly."""
     import split_eras
 
     with tempfile.TemporaryDirectory() as tmp:

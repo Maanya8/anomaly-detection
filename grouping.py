@@ -2,9 +2,9 @@
 satellite's current-period behavior still belongs to its reference-period
 group.
 
-Assumes each satellite's JSON file already carries `glint` (bool) and
-`period` ("reference" / "current" / null) fields, as written by the earlier
-pipeline stages (glint tagging, then period/counts).
+Each satellite's JSON file must already have the `glint` (bool) and `period`
+("reference", "current", or null) fields. `glint_detect.py` and
+`current_points_check.py` write them.
 
 Expected layout:
     DATA_DIR/era1/<norad_id>.json
@@ -29,33 +29,32 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 # --- editable constants -----------------------------------------------
-DATA_DIR = "data_json"   # placeholder, edit before running
-PLOTS_DIR = "pca_plots"      # placeholder, edit before running
+DATA_DIR = "data_json"   # Root folder for standalone runs. start.py ignores it.
+PLOTS_DIR = "pca_plots"      # Plot folder for standalone runs. start.py ignores it.
 
-# Minimum non-glint points needed on one SEPA side (< 0 or >= 0) to fit a
-# slope for that side. Below this, the fit is too noisy to trust.
+# Minimum number of non-glint points on one SEPA side (< 0 or >= 0) to fit a
+# slope for that side. With fewer points, the fit is too noisy.
 MIN_POINTS_PER_ARM = 5
 
-# Minimum SEPA span (degrees) an arm's points must cover before its slope
-# is trusted. A handful of points crammed into a fraction of a degree can
-# still clear MIN_POINTS_PER_ARM, but fitting a line through them and
-# extrapolating it back to SEPA = 0 amplifies ordinary point-to-point
-# noise into an enormous, meaningless slope and intercept.
+# Minimum SEPA span, in degrees, that an arm's points must cover before the
+# code trusts its slope. A few points within a fraction of a degree can pass
+# MIN_POINTS_PER_ARM. A line through them, extended back to SEPA = 0, turns
+# small point-to-point noise into a very large slope and intercept.
 MIN_ARM_SEPA_SPAN = 10.0
 
-# Candidate cluster counts tried per era; the best is picked by silhouette
-# score. Widen this if an era's satellites plausibly split into more than
-# 6 behavior groups.
+# Cluster counts to try for each era. The code picks the count with the best
+# silhouette score. If an era's satellites can split into more than 6
+# behavior groups, widen this range.
 K_RANGE = range(2, 7)
 
-# A current-period vector farther from its nearest centroid than this
-# percentile of reference-period, own-cluster distances gets flagged
-# "unusual" rather than just "shifted".
+# If a current-period vector is farther from its nearest centroid than this
+# percentile of reference-period, own-cluster distances, the code flags it
+# "unusual".
 UNUSUAL_DISTANCE_PERCENTILE = 95
 
-# Prints per-satellite arm-fit diagnostics (point counts, SEPA span, whether
-# the fit was rejected and fell back to reference). Turn off once you trust
-# the output; it's noisy on large eras.
+# Prints arm-fit diagnostics for each satellite: point counts, SEPA span, and
+# whether the fit was rejected and fell back to the reference. The output is
+# long on large eras, so keep this off unless you are checking fits.
 DEBUG = False
 
 FEATURE_NAMES = [
@@ -65,18 +64,17 @@ FEATURE_NAMES = [
 
 
 def load_points(filepath):
-    """Return a file's points list, regardless of which of the two known
-    file shapes it uses.
-    """
+    """Return a file's points list from either of the two file shapes."""
     with open(filepath) as f:
         data = json.load(f)
     return data["points"] if isinstance(data, dict) else data
 
 
 def split_period(points):
-    """Split into (reference, current) points, dropping glint-tagged points
-    from both. Glint points are excluded from every downstream feature, the
-    same way the point-level scoring pipeline excludes them.
+    """Split points into (reference, current) and drop glint points from both.
+
+    No feature uses glint points, which matches the point-level scoring
+    stages.
     """
     ref = [p for p in points if p.get("period") == "reference" and not p.get("glint")]
     cur = [p for p in points if p.get("period") == "current" and not p.get("glint")]
@@ -85,9 +83,10 @@ def split_period(points):
 
 def fit_arm(points, side):
     """Fit magnitude = slope * SEPA + intercept for one side of the phase
-    curve. `side` is 'left' (SEPA < 0) or 'right' (SEPA >= 0). Returns
-    (slope, intercept), or None if there aren't enough points on that side
-    to trust the fit.
+    curve. `side` is 'left' (SEPA < 0) or 'right' (SEPA >= 0).
+
+    Returns (slope, intercept). If the side has too few points or too small
+    a SEPA span, returns None.
     """
     if side == "left":
         arm = [p for p in points if p["equatorial_phase"] < 0]
@@ -104,21 +103,21 @@ def fit_arm(points, side):
 
 
 def extract_features(points, fallback_arms=None):
-    """Compute the 6-feature vector for one satellite, one period
-    (reference or current), from its already period-filtered, glint-free
-    points.
+    """Compute the 6-feature vector for one satellite and one period.
 
-    `fallback_arms`, if given, is {'left': (slope, intercept), 'right':
-    (slope, intercept)} from the SAME satellite's reference-period fit. A
-    current-period window is often only 6 hours, so it commonly covers
-    just one side of SEPA = 0; without a fallback, that satellite would
-    never get a current-period vector at all. When a side falls back,
-    that side's slope/intercept describes reference behavior, not this
-    window's measurement, so asymmetry and near_zero_peak are only fully
-    "current" when both arms were actually observed this window.
+    `points` must already be filtered to one period, reference or current,
+    with glint points removed.
 
-    Returns None if a side can't be fit and there's no fallback for it, or
-    if there are no points at all.
+    `fallback_arms` is optional. It holds {'left': (slope, intercept),
+    'right': (slope, intercept)} from the reference-period fit of the same
+    satellite. The current window lasts 6 hours, so it often covers only one
+    side of SEPA = 0. Without a fallback, that satellite gets no
+    current-period vector. If a side uses the fallback, its slope and
+    intercept describe reference behavior. In that case, `asymmetry` and
+    `near_zero_peak` mix reference and current data.
+
+    Returns None if there are no points, or if a side cannot be fit and has
+    no fallback.
     """
     if not points:
         return None
@@ -129,10 +128,9 @@ def extract_features(points, fallback_arms=None):
     left_slope, left_intercept = left
     right_slope, right_intercept = right
 
-    # Residual variability: how much magnitude scatters around the two-arm
-    # fit, not around a single flat median. This isolates tumble/flicker
-    # noise from the phase curve's own shape, so a steep curve doesn't get
-    # mistaken for a noisy one.
+    # Measure scatter around the two-arm fit, not around one flat median.
+    # This separates tumble and flicker noise from the shape of the phase
+    # curve, so a steep curve does not count as a noisy one.
     predicted = np.array([
         left_slope * p["equatorial_phase"] + left_intercept
         if p["equatorial_phase"] < 0
@@ -141,15 +139,14 @@ def extract_features(points, fallback_arms=None):
     ])
     actual = np.array([p["magnitude"] for p in points])
     residuals = actual - predicted
-    # Scaled MAD, same 1.4826 convention as the point-level scoring script,
-    # so this residual spread is comparable in scale to a normal std dev.
+    # Scale the MAD by 1.4826, as the scoring stages do, so this spread is
+    # on the same scale as a normal standard deviation.
     residual_variability = 1.4826 * np.median(np.abs(residuals - np.median(residuals)))
 
     brightness_level = float(np.median(actual))
     asymmetry = right_slope - left_slope
-    # Near-zero brightness, read off both arms' fits rather than from real
-    # points, since the glint window usually removes the points that would
-    # otherwise sit right at SEPA = 0.
+    # Read the brightness at SEPA = 0 from the two arm fits, not from real
+    # points. The glint window usually removes the points near SEPA = 0.
     near_zero_peak = (left_intercept + right_intercept) / 2
 
     return np.array([
@@ -159,14 +156,15 @@ def extract_features(points, fallback_arms=None):
 
 
 def choose_k(X_scaled):
-    """Pick cluster count by silhouette score over K_RANGE, clipped to
-    what the sample size can support (silhouette needs at least 2 points
-    per cluster to mean anything).
+    """Pick the cluster count in K_RANGE with the best silhouette score.
+
+    The largest count tried is one less than the number of satellites,
+    because the silhouette score needs more samples than clusters.
     """
     max_k = min(max(K_RANGE), len(X_scaled) - 1)
     candidates = [k for k in K_RANGE if k <= max_k]
     if not candidates:
-        return 2  # too few satellites for a real search; fall back
+        return 2  # Too few satellites to search, so use 2 clusters.
     best_k, best_score = candidates[0], -1
     for k in candidates:
         labels = KMeans(n_clusters=k, n_init=10, random_state=0).fit_predict(X_scaled)
@@ -188,9 +186,9 @@ def process_era(era_dir, era_name, plots_dir):
         if ref_features is None:
             print(f"  skip {filepath.name}: not enough reference points on one arm")
             continue
-        # Reference arms always exist here (ref_features succeeded), so this
-        # gives current-period extraction something to fall back on for
-        # whichever side the current window didn't cover.
+        # Both reference arms exist here because `ref_features` succeeded.
+        # The current-period fit uses them for any side the current window
+        # does not cover.
         ref_arms = {"left": fit_arm(ref_points, "left"), "right": fit_arm(ref_points, "right")}
         cur_left_own = fit_arm(cur_points, "left")
         cur_right_own = fit_arm(cur_points, "right")
@@ -221,8 +219,8 @@ def process_era(era_dir, era_name, plots_dir):
     kmeans = KMeans(n_clusters=k, n_init=10, random_state=0).fit(X_ref_scaled)
     ref_labels = kmeans.labels_
 
-    # Reference-side distance to each satellite's own cluster centroid,
-    # used below as the baseline for what an "unusual" current distance is.
+    # Distance from each reference vector to its own cluster centroid. These
+    # distances set the threshold for an "unusual" current distance.
     ref_distances = np.linalg.norm(X_ref_scaled - kmeans.cluster_centers_[ref_labels], axis=1)
     unusual_threshold = np.percentile(ref_distances, UNUSUAL_DISTANCE_PERCENTILE)
 
@@ -230,7 +228,7 @@ def process_era(era_dir, era_name, plots_dir):
     ref_pca = pca.transform(X_ref_scaled)
 
     results = []
-    cur_pca_points = []  # for plotting: (satellite index, pca point, cur_label, shifted, unusual)
+    cur_pca_points = []  # For plotting: (satellite index, pca point, cur_label, shifted, partial)
     for i, sat in enumerate(satellites):
         entry = {
             "norad_id": sat["norad_id"], "ref_cluster": int(ref_labels[i]),
@@ -263,10 +261,13 @@ def process_era(era_dir, era_name, plots_dir):
 
 
 def _save_plot(era_name, plots_dir, ref_pca, ref_labels, cur_pca_points, k):
-    """Reference points colored by cluster; current points overlaid as
-    triangles; an arrow from each satellite's reference point to its
-    current point, red and solid where the cluster changed, gray and
-    dashed otherwise."""
+    """Save the PCA scatter plot for one era.
+
+    Circles are reference vectors, colored by cluster. Triangles are
+    current vectors. An arrow links each satellite's reference vector to its
+    current vector. The arrow is red and solid if the cluster changed, and
+    gray and dashed otherwise.
+    """
     fig, ax = plt.subplots(figsize=(8, 6))
     cmap = plt.get_cmap("tab10")
 
@@ -276,9 +277,9 @@ def _save_plot(era_name, plots_dir, ref_pca, ref_labels, cur_pca_points, k):
                    marker="o", s=40, label=f"cluster {cluster} (reference)", alpha=0.85)
 
     for i, cur_point, cur_label, shifted, partial in cur_pca_points:
-        # Dashed edge = at least one arm came from the reference fallback
-        # (typically a 6-hour current window that only covered one side of
-        # SEPA = 0), not from this window's own current-period points.
+        # A dashed edge means at least one arm came from the reference
+        # fallback. This usually happens when the 6-hour current window
+        # covers only one side of SEPA = 0.
         ax.scatter(*cur_point, color=cmap(cur_label), marker="^", s=60,
                    edgecolor="black", linewidth=0.6,
                    linestyle=("--" if partial else "-"), zorder=3)

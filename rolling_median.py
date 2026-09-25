@@ -1,34 +1,30 @@
-"""
-rolling_median_scoring.py
+"""Score current-window points against reference points in a fixed SEPA window.
 
-Same point-level / anomaly-level scoring as deviation_scoring.py (the kNN
-version), but with a different neighbor-selection method: instead of the k
-nearest reference points by SEPA, this uses every reference point that falls
-inside a fixed SEPA window around the current point ("rolling median").
+The scoring matches `knn.py`, but the neighbors differ. `knn.py` takes the k
+nearest reference points by SEPA. This script takes every reference point
+inside a fixed SEPA window around the current point, which is a rolling
+median.
 
     spread = sqrt( (1.4826 * MAD(neighbor magnitudes))^2 + magnitude_unc^2 )
     z_score_median = (current magnitude - median(neighbor magnitudes)) / spread
 
-This is ADDITIVE: it does not touch anything written by the kNN script.
-It reads whatever is already in each file (including z_score / flagged /
-anomaly_score / "anomalies" from the kNN run, if present) and only adds:
+The script only adds fields. It keeps every field that earlier stages wrote,
+including the `knn.py` fields. It adds these fields:
 
     per point (current, non-glint, with enough neighbors in the window):
         "z_score_median"       -> float
         "flagged_median"       -> bool
-        "anomaly_score_median" -> float, only if grouped into an anomaly
+        "anomaly_score_median" -> float, only if the point is in an anomaly
     at the file level:
         "anomalies_median" -> [ {norad_id, equatorial_phase, timestamp,
                                    score, n_points}, ... ]
 
-Every previously-written field (from glint tagging, period/counts, or the
-kNN scoring script) is left exactly as it was. Glint-tagged points are
-excluded entirely, same as the kNN script: never used as neighbors, never
-scored themselves.
+Like `knn.py`, the script ignores glint points. They are never neighbors and
+never get a score.
 
-Overwrites each JSON file in place (temp file + os.replace), and saves one
-diagnostic PNG per file to PLOTS_DIR (suffixed "_median" so it doesn't
-overwrite the kNN script's plots).
+The script overwrites each JSON file in place through a temp file and
+`os.replace`. It saves one diagnostic PNG per file to `PLOTS_DIR`. Each PNG
+name ends in "_median" so it cannot overwrite a `knn.py` plot.
 """
 
 import glob
@@ -44,45 +40,46 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------------------------
-# EDITABLE PARAMETERS -- change these and re-run
+# Editable parameters. Change these values and re-run the script.
 # ---------------------------------------------------------------------------
 
-# Root folder containing era1/, era2/, era3/ subfolders of per-satellite JSON
-# files. Placeholder -- fill in the real path before running.
+# Root folder that holds the era1/, era2/, and era3/ subfolders of
+# per-satellite JSON files. `start.py` replaces this value with its own
+# `data_dir`.
 DATA_DIR = "data_json"
 
-# Where diagnostic plots get saved (one PNG per satellite file, mirroring the
-# era1/era2/era3 subfolder layout). Can be the same folder the kNN script
-# uses -- filenames are suffixed "_median" so nothing collides.
+# Folder for the diagnostic plots. The script writes one PNG per satellite
+# file and repeats the era1/era2/era3 subfolder layout. This folder can be
+# the same one `knn.py` uses, because the "_median" suffix keeps names apart.
 PLOTS_DIR = "plots_median"
 
-# Half-width, in degrees of SEPA, of the rolling window: a current point at
-# SEPA=s uses every non-glint reference point with SEPA in [s - W, s + W].
-#   Narrower window -> more locally specific, but may catch too few
-#                       reference points in sparse regions of SEPA.
-#   Wider window     -> more stable median/MAD, but blurs local structure
-#                       and can pull in less-representative reference points.
-# No fixed convention here -- try a few, e.g. 2.0, 5.0, 10.0 degrees, and
-# compare against the kNN version's results.
+# Half-width of the rolling window, in degrees of SEPA. A current point at
+# SEPA s uses every non-glint reference point with SEPA in [s - W, s + W].
+#   Narrower window: more specific to the local SEPA, but sparse regions can
+#                    have too few reference points.
+#   Wider window:    a more stable median and MAD, but it can hide local
+#                    structure and include reference points from a
+#                    different SEPA.
+# No standard value exists. Try 2.0, 5.0, and 10.0 degrees and compare the
+# results with `knn.py`.
 WINDOW_HALF_WIDTH_DEG = 5.0
 
-# Minimum number of reference neighbors inside the window required to
-# compute a score. Below this, the local median/MAD would be unreliable, so
-# the point is left unscored (no z_score_median field) rather than guessed.
+# Minimum number of reference points the window needs before the script
+# computes a score. With fewer points the local median and MAD are
+# unreliable, so the point gets no `z_score_median` field.
 MIN_NEIGHBORS = 5
 
-# |z_score_median| at or above this marks a point "flagged" and eligible for
-# grouping into an anomaly.
-# Values discussed for the kNN version: 2.5, 3.0, 3.5 -- same range applies
-# here, though the rolling-median window can yield a different neighbor set
-# (and so different z-scores) than kNN at the same point.
+# A point with |z_score_median| at or above this value is flagged and can
+# join an anomaly. The tested range from `knn.py` (2.5, 3.0, 3.5) also applies
+# here. At the same point, the window can select different neighbors than
+# kNN, so the z-scores can differ.
 FLAG_THRESHOLD = 3.0
 
 # ---------------------------------------------------------------------------
 
 
 def robust_mad(values, center):
-    """Median absolute deviation around `center` (not multiplied by 1.4826)."""
+    """Return the median absolute deviation around `center`, unscaled by 1.4826."""
     return statistics_median(abs(v - center) for v in values)
 
 
@@ -98,7 +95,7 @@ def statistics_median(iterable):
 
 
 def window_neighbors(target_sepa, ref_points, half_width):
-    """All reference points with SEPA within [target_sepa - half_width,
+    """Return every reference point with SEPA in [target_sepa - half_width,
     target_sepa + half_width]."""
     lo, hi = target_sepa - half_width, target_sepa + half_width
     return [p for p in ref_points if lo <= p["equatorial_phase"] <= hi]
@@ -106,10 +103,10 @@ def window_neighbors(target_sepa, ref_points, half_width):
 
 def point_z_score_median(current_point, ref_points, half_width, min_neighbors):
     """
-    Rolling-median robust z-score for one current point, using every
-    reference neighbor inside a fixed SEPA window, with the current point's
-    own magnitude_unc folded in via quadrature. Returns None if there are
-    fewer than min_neighbors reference points in the window.
+    Return the rolling-median robust z-score of one current point. The
+    neighbors are every reference point inside a fixed SEPA window. The
+    point's own `magnitude_unc` is added in quadrature. If the window holds
+    fewer than `min_neighbors` reference points, return None.
     """
     neighbors = window_neighbors(current_point["equatorial_phase"], ref_points, half_width)
     if len(neighbors) < min_neighbors:
@@ -123,9 +120,9 @@ def point_z_score_median(current_point, ref_points, half_width, min_neighbors):
 
     spread = math.sqrt(ref_scatter ** 2 + point_unc ** 2)
     if spread == 0:
-        # Degenerate case (zero reference scatter and zero reported
-        # uncertainty) -- tiny epsilon so an exact match gives z == 0
-        # instead of a ZeroDivisionError.
+        # Both the reference scatter and the reported uncertainty are zero.
+        # Use a small epsilon to avoid a ZeroDivisionError. An exact match
+        # still gives z == 0.
         spread = 1e-6
 
     return (current_point["magnitude"] - median_mag) / spread
@@ -133,9 +130,11 @@ def point_z_score_median(current_point, ref_points, half_width, min_neighbors):
 
 def group_and_score_anomalies_median(scored_current_points, threshold):
     """
-    Same grouping logic as the kNN script: consecutive flagged points (no
-    un-flagged point between them, in time order) become one anomaly, scored
-    from the median |z_score_median| of the group via the normal CDF.
+    Group consecutive flagged points into anomalies, as `knn.py` does.
+
+    Points are in time order, and a group ends at the first unflagged point.
+    The normal CDF turns the median |z_score_median| of each group into its
+    score.
     """
     anomalies = []
     point_to_score = {}
@@ -166,7 +165,7 @@ def group_and_score_anomalies_median(scored_current_points, threshold):
         else:
             close_group()
             group = []
-    close_group()  # flush trailing group
+    close_group()  # Close the last group if the data ends on a flagged point.
 
     return anomalies, point_to_score
 
@@ -197,8 +196,8 @@ def process_file(filepath, plots_dir):
     for p in current_points:
         z = point_z_score_median(p, ref_points, WINDOW_HALF_WIDTH_DEG, MIN_NEIGHBORS)
         if z is None:
-            # Too few reference neighbors in the window -- leave unscored
-            # rather than fabricate a value.
+            # The window has too few reference points, so leave the point
+            # unscored.
             continue
         p["z_score_median"] = z
         scored_current_points.append(p)
@@ -209,9 +208,8 @@ def process_file(filepath, plots_dir):
         if score is not None:
             p["anomaly_score_median"] = score
 
-    # Additive: attach alongside whatever else is already in the file
-    # (glint, period, z_score/flagged/anomaly_score/anomalies from the kNN
-    # script, etc.) without touching any of it.
+    # Add the new field and keep every existing field, including the glint,
+    # period, and `knn.py` fields.
     if is_wrapped:
         data["anomalies_median"] = anomalies_median
     else:
@@ -230,13 +228,13 @@ def process_file(filepath, plots_dir):
 
 def plot_file(points, filepath, plots_dir):
     """
-    One diagnostic PNG per file: magnitude vs equatorial_phase, marking:
-      - reference vs current (marker shape)
-      - glint points (separate marker, drawn on top, regardless of period)
-      - flagged vs non-flagged current points, by the ROLLING-MEDIAN result
-        (flagged_median), so this plot can be compared side by side with the
-        kNN script's plot for the same file.
-    Same black-background styling as the kNN script's plots.
+    Save one diagnostic PNG of magnitude against equatorial phase.
+
+    Marker shape separates reference points from current points. Color
+    separates flagged current points from unflagged ones, using
+    `flagged_median`. Glint points use their own marker and sit on top,
+    whatever their period. The styling matches the `knn.py` plots so you can
+    compare the two plots for one file side by side.
     """
     ref_non_glint = [p for p in points if p.get("period") == "reference" and not p.get("glint", False)]
     cur_non_glint = [p for p in points if p.get("period") == "current" and not p.get("glint", False)]
@@ -263,7 +261,7 @@ def plot_file(points, filepath, plots_dir):
     scatter(cur_flagged, marker="^", s=60, c="#ff3b3b", edgecolors="white", linewidths=0.7, label="current (flagged)", zorder=4)
     scatter(glint_pts, marker="x", s=70, c="#00e5ff", linewidths=2.0, label="glint (excluded)", zorder=5)
 
-    ax.invert_yaxis()  # magnitude: lower is brighter, conventional to invert
+    ax.invert_yaxis()  # A lower magnitude is brighter, so brighter points plot higher.
     ax.set_xlabel("Equatorial phase (SEPA, deg)", color="white")
     ax.set_ylabel("Magnitude", color="white")
     ax.set_title(Path(filepath).stem + "  (rolling median)", color="white")

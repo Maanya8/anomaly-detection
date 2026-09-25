@@ -3,11 +3,11 @@
 Usage:
     python split_eras.py <combined_file> <output_dir>
 
-Reverses combine_eras.py: combined_file is the nested
-{era: {stem: content}} structure that script writes. output_dir is
-created if it doesn't exist and reused as-is if it does; every
-<era>/<stem>.json is written under it with exactly the content
-combine_eras.py read from the original file.
+This script reverses `combine_eras.py`. `combined_file` holds the nested
+{era: {stem: content}} structure that `combine_eras.py` writes. If
+`output_dir` does not exist, the script creates it. The script writes each
+<era>/<stem>.json under `output_dir` with the exact content that
+`combine_eras.py` read from the original file.
 """
 
 import argparse
@@ -21,10 +21,9 @@ from pathlib import Path
 def split(combined_file, output_dir):
     """Read combined_file and write every era/stem.json under output_dir.
 
-    A file that fails to write is skipped, not fatal, for the same reason
-    combine_eras.py skips a file that fails to parse: one bad entry should
-    not block writing the rest. Skipped entries come back separately so
-    the caller can report them.
+    If a file fails to write, skip it and continue, so one bad entry does
+    not stop the rest. The function returns the skipped entries separately
+    so the caller can report them.
     """
     with open(combined_file) as f:
         combined = json.load(f)
@@ -46,8 +45,7 @@ def split(combined_file, output_dir):
 
 
 def _write_json(path, content):
-    # Write to a temp file first so a failure cannot leave a truncated
-    # file behind, same pattern the rest of the pipeline uses.
+    # Write to a temp file first so a failure cannot leave a truncated file.
     fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
     with os.fdopen(fd, "w") as f:
         json.dump(content, f)

@@ -2,15 +2,14 @@
 
 The script overwrites each file in place. It changes no other field.
 
-Accepts two file shapes:
-  - a plain list of points, e.g. [ {...}, {...} ]
-  - the wrapped structure produced by the later period/counts step, e.g.
+The script accepts two file shapes:
+  - a plain list of points, for example [ {...}, {...} ]
+  - the wrapped structure that `current_points_check.py` writes, for example
     {"reference_point_count": N, "current_point_count": M,
      "no_current_points": true,  "points": [ {...}, {...} ]}
-Whichever shape is read back is the shape written back -- only each point's
-"glint" field is touched; every other field (including the wrapper's
-reference_point_count / current_point_count / no_current_points) is left
-exactly as it was.
+The script writes back the same shape it reads. It sets only the `glint`
+field of each point and keeps every other field, including the wrapper
+counts.
 """
 import json
 import os
@@ -20,7 +19,7 @@ from pathlib import Path
 
 import numpy as np
 
-DATA_DIR = Path("data_json")  # placeholder: edit this path
+DATA_DIR = Path("data_json")  # Root folder for standalone runs. start.py ignores it.
 ERAS = ["era1", "era2", "era3"]
 
 FIXED_WINDOW = (-5.0, 10.0)  # fallback window in degrees of SEPA
@@ -66,9 +65,12 @@ def glint_window(sepa, mag):
 
 
 def load_points(data):
-    """Return (points, wrapper). wrapper is the original dict if the file was
-    wrapped (so it can be written straight back, points included by
-    reference), or None if the file was a plain list."""
+    """Return (points, wrapper).
+
+    If the file is wrapped, `wrapper` is the original dict, and `points` is
+    the same list object as `wrapper["points"]`. If the file is a plain
+    list, `wrapper` is None.
+    """
     if isinstance(data, dict) and "points" in data:
         return data["points"], data
     return data, None
@@ -85,7 +87,7 @@ def process_file(path):
         mag = np.array([p["magnitude"] for p in points], dtype=float)
         window = glint_window(sepa, mag)
     else:
-        # Nothing to tag (e.g. an empty points list) -- nothing is glint.
+        # The file has no points, so no point is glint.
         sepa = np.array([], dtype=float)
         window = None
 
@@ -97,9 +99,9 @@ def process_file(path):
 
     print(f"{path}:{count} glint points")
 
-    # `points` is the same list object as `wrapper["points"]` when wrapped,
-    # so wrapper already reflects the updated glint values -- write back
-    # whichever shape was read in.
+    # For a wrapped file, `points` is the same list object as
+    # `wrapper["points"]`, so `wrapper` already holds the new glint values.
+    # Write back the shape that was read.
     out = wrapper if wrapper is not None else points
 
     # Write to a temp file first so a failure cannot corrupt the original.
@@ -110,9 +112,11 @@ def process_file(path):
 
 
 def diagnose_file(path):
-    """Read-only: report which branch glint_window() took and why, without
-    writing anything. Useful for finding out why a file ended up with no
-    (or unexpectedly many/few) glint == true points."""
+    """Report which branch `glint_window()` takes for a file, and why.
+
+    The function writes nothing. Use it to find out why a file has no glint
+    points, or more or fewer than expected.
+    """
     with open(path) as f:
         data = json.load(f)
     points, _ = load_points(data)
@@ -186,12 +190,13 @@ def diagnose():
 def run():
     for era in ERAS:
         for path in sorted((DATA_DIR / era).iterdir()):
-            if path.suffix == ".json":  # ignore other file types
+            if path.suffix == ".json":  # Skip other file types.
                 process_file(path)
 
 
 def _check():
-    """Synthetic satellite with glint scatter at 3 to 8 degrees."""
+    """Check that a synthetic satellite with glint scatter at 3 to 8 degrees
+    gets a window near those bounds."""
     rng = np.random.default_rng(0)
     s = rng.uniform(-40, 40, 3000)
     m = 12 + 0.02 * s + rng.normal(0, 0.05, s.size)

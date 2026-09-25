@@ -1,9 +1,9 @@
 @echo off
 setlocal
 
-rem Finds a Python launcher, in order of preference, and stops with a
-rem clear message if none is on PATH -- pip install fails with a much
-rem more confusing error if this step is skipped.
+rem Find a Python launcher, in order of preference. If none is on PATH,
+rem stop with a clear message. Without this check, pip install fails
+rem later with a less clear error.
 where py >nul 2>&1
 if %errorlevel% == 0 (
     set PYTHON=py
@@ -17,7 +17,7 @@ if %errorlevel% == 0 (
     )
 )
 
-rem Reuse an existing venv untouched; only create one if it's missing.
+rem If venv already exists, reuse it. Otherwise, create it.
 if exist venv\Scripts\activate.bat (
     echo Using existing virtual environment in venv\
 ) else (
@@ -41,6 +41,6 @@ if errorlevel 1 (
 echo.
 echo Setup complete. To run the pipeline:
 echo   venv\Scripts\activate.bat
-echo   python pipeline.py data_json output
+echo   python start.py data_json output
 
 endlocal

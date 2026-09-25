@@ -1,48 +1,45 @@
-"""
-deviation_scoring.py
+"""Score current-window points against their k nearest reference neighbors.
 
-Step 1 (point-level): robust z-score for each current-window point, using its
-K nearest reference-window neighbors by |SEPA| distance.
+Step 1 computes a robust z-score for each current-window point. The
+neighbors are the K reference-window points closest in |SEPA| distance.
 
     spread = sqrt( (1.4826 * MAD(neighbor magnitudes))^2 + magnitude_unc^2 )
     z = (current magnitude - median(neighbor magnitudes)) / spread
 
-The MAD term is the reference's normal point-to-point scatter at that SEPA;
-the magnitude_unc term is this one current point's own measurement error.
-Combining them in quadrature (rather than just using the MAD) means a noisy
-current point (large magnitude_unc) needs a bigger raw difference before it
-is flagged, while a precise point is judged against the reference scatter
-alone -- z reflects "how surprising is this given everything we know," not
-just "how far from the reference median."
+The MAD term measures the normal reference scatter at that SEPA. The
+`magnitude_unc` term is the measurement error of the current point. The
+script adds the two in quadrature. As a result, a noisy current point needs a
+larger raw difference before it is flagged. A precise point is compared
+against the reference scatter alone.
 
-Step 2 (anomaly-level): group consecutive flagged points (same NORAD ID,
-contiguous in the time-sorted current window) into one anomaly, and turn the
-group's median |z| into a 0-1 score via the normal CDF:
+Step 2 groups consecutive flagged points into one anomaly. Points in a group
+share a NORAD ID and are adjacent in the time-sorted current window. The
+normal CDF turns the median |z| of the group into a score from 0 to 1:
 
     score = erf(median(|z|) / sqrt(2))
 
-Glint-tagged points (glint == true) are excluded entirely: they are never
-used as reference neighbors and are never scored themselves, since glinting
-is a known confound the earlier glint-tagging step already identified.
+The script ignores points where `glint` is true. They are never reference
+neighbors and never get a score, because the glint-tagging step already
+marked them as a known confound.
 
-Expects the file structure produced by the earlier "period + counts" script:
+The script expects the file structure that `current_points_check.py` writes:
     {
       "reference_point_count": N,
       "current_point_count": M,
       "points": [ {norad_id, timestamp, equatorial_phase, magnitude,
                     magnitude_unc, sensor, zeroptd, glint, period}, ... ]
     }
-A plain list of points (pre-period-tagging) is also accepted for robustness.
+It also accepts a plain list of points.
 
-Writes back, per point:
+The script writes these fields to each point:
     "z_score"        -> float, only for scored (current, non-glint) points
     "flagged"        -> bool,  only for scored points
-    "anomaly_score"  -> float, only for points belonging to a grouped anomaly
-and at the file level:
+    "anomaly_score"  -> float, only for points in a grouped anomaly
+It writes this field at the file level:
     "anomalies" -> [ {norad_id, equatorial_phase, timestamp, score, n_points}, ... ]
 
-Overwrites each JSON file in place (temp file + os.replace), same pattern as
-the earlier scripts. Also saves one diagnostic PNG per file to PLOTS_DIR.
+The script overwrites each JSON file in place through a temp file and
+`os.replace`. It also saves one diagnostic PNG per file to `PLOTS_DIR`.
 """
 
 import glob
@@ -58,41 +55,40 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 # ---------------------------------------------------------------------------
-# EDITABLE PARAMETERS -- change these and re-run
+# Editable parameters. Change these values and re-run the script.
 # ---------------------------------------------------------------------------
 
-# Root folder containing era1/, era2/, era3/ subfolders of per-satellite JSON
-# files. Placeholder -- fill in the real path before running.
+# Root folder that holds the era1/, era2/, and era3/ subfolders of
+# per-satellite JSON files. `start.py` replaces this value with its own
+# `data_dir`.
 DATA_DIR = "data_json"
 
-# Where diagnostic plots get saved (one PNG per satellite file, mirroring the
-# era1/era2/era3 subfolder layout).
+# Folder for the diagnostic plots. The script writes one PNG per satellite
+# file and repeats the era1/era2/era3 subfolder layout.
 PLOTS_DIR = "plots_knn"
 
-# Number of nearest reference neighbors (by |SEPA| distance) used to build
-# the local median/MAD for each current point.
-#   Smaller k  -> more locally sensitive, but a noisier MAD estimate
-#                 (especially near the ends of the SEPA range, where fewer
-#                 reference points are nearby).
-#   Larger k   -> smoother, more stable MAD, but can blur real local
-#                 structure and pull in reference points less representative
-#                 of that SEPA.
-# Values discussed: 5, 10, 15, 20.
+# Number of nearest reference neighbors, by |SEPA| distance, that set the
+# local median and MAD for each current point.
+#   Smaller k: more sensitive to local changes, but the MAD estimate is
+#              noisier. The effect is strongest near the ends of the SEPA
+#              range, where fewer reference points exist.
+#   Larger k:  a more stable MAD, but it can hide real local structure and
+#              include reference points from a different SEPA.
+# Tested values: 5, 10, 15, 20.
 K_NEIGHBORS = 15
 
-# |z| at or above this marks a point "flagged" and eligible for grouping into
-# an anomaly.
-#   Lower threshold  -> more sensitive, more false positives.
-#   Higher threshold -> fewer, higher-confidence flags, may miss subtle
-#                       drifts.
-# Values discussed: 2.5, 3.0, 3.5.
+# A point with |z| at or above this value is flagged and can join an anomaly.
+#   Lower threshold:  more sensitive, more false positives.
+#   Higher threshold: fewer flags with higher confidence, but it can miss
+#                     small drifts.
+# Tested values: 2.5, 3.0, 3.5.
 FLAG_THRESHOLD = 3.0
 
 # ---------------------------------------------------------------------------
 
 
 def robust_mad(values, center):
-    """Median absolute deviation around `center` (not multiplied by 1.4826)."""
+    """Return the median absolute deviation around `center`, unscaled by 1.4826."""
     return statistics_median(abs(v - center) for v in values)
 
 
@@ -108,17 +104,16 @@ def statistics_median(iterable):
 
 
 def knn_neighbors(target_sepa, ref_points, k):
-    """K reference points with smallest |SEPA - target_sepa|."""
+    """Return the k reference points with the smallest |SEPA - target_sepa|."""
     ranked = sorted(ref_points, key=lambda p: abs(p["equatorial_phase"] - target_sepa))
     return ranked[:k]
 
 
 def point_z_score(current_point, ref_points, k):
     """
-    Robust z-score for one current point against its k nearest (by SEPA)
-    reference neighbors, with the current point's own magnitude_unc folded
-    in via quadrature. Returns None if there are no reference neighbors at
-    all (can't score).
+    Return the robust z-score of one current point against its k nearest
+    reference neighbors by SEPA. The point's own `magnitude_unc` is added in
+    quadrature. If no reference points exist, return None.
     """
     if not ref_points:
         return None
@@ -134,11 +129,9 @@ def point_z_score(current_point, ref_points, k):
     spread = math.sqrt(ref_scatter ** 2 + point_unc ** 2)
 
     if spread == 0:
-        # Zero reference scatter AND zero reported measurement uncertainty.
-        # A degenerate case, not "no deviation is possible" -- fall back to
-        # a tiny epsilon so an exact match still gives z == 0, and any real
-        # difference produces a (very large, correctly so) z rather than a
-        # ZeroDivisionError.
+        # Both the reference scatter and the reported uncertainty are zero.
+        # Use a small epsilon to avoid a ZeroDivisionError. An exact match
+        # still gives z == 0, and any real difference gives a very large z.
         spread = 1e-6
 
     return (current_point["magnitude"] - median_mag) / spread
@@ -146,13 +139,14 @@ def point_z_score(current_point, ref_points, k):
 
 def group_and_score_anomalies(scored_current_points, threshold):
     """
-    scored_current_points: current, non-glint points that have a z_score,
-    already sorted by timestamp.
-    Groups consecutive flagged points (no un-flagged point between them) into
-    anomalies and computes each anomaly's score from the median |z| of the
-    group.
-    Returns (anomalies, point_id_to_anomaly_score) where anomalies is a list
-    of dicts ready to attach at the file level.
+    Group consecutive flagged points into anomalies and score each group.
+
+    `scored_current_points` holds current, non-glint points that have a
+    `z_score`, sorted by timestamp. A group ends at the first unflagged
+    point. Each group's score comes from the median |z| of its points.
+
+    Returns (anomalies, point_id_to_anomaly_score). `anomalies` is a list of
+    dicts for the file-level "anomalies" field.
     """
     anomalies = []
     point_to_score = {}
@@ -184,14 +178,14 @@ def group_and_score_anomalies(scored_current_points, threshold):
         else:
             close_group()
             group = []
-    close_group()  # flush trailing group
+    close_group()  # Close the last group if the data ends on a flagged point.
 
     return anomalies, point_to_score
 
 
 def parse_timestamp(ts):
-    # Points are already-parsed strings in the data; used only for plot
-    # ordering, so fall back to string sort if the format is unexpected.
+    # This value only sets the sort order. If the format is unexpected,
+    # return the string so the points sort as text.
     try:
         return datetime.fromisoformat(ts.replace("Z", "+00:00"))
     except Exception:
@@ -202,8 +196,8 @@ def process_file(filepath, plots_dir):
     with open(filepath, "r") as f:
         data = json.load(f)
 
-    # Accept either the current {reference_point_count, current_point_count,
-    # points} structure or a plain list, for robustness.
+    # Accept the wrapped {reference_point_count, current_point_count, points}
+    # structure or a plain list of points.
     if isinstance(data, dict) and "points" in data:
         points = data["points"]
         is_wrapped = True
@@ -219,8 +213,7 @@ def process_file(filepath, plots_dir):
     for p in current_points:
         z = point_z_score(p, ref_points, K_NEIGHBORS)
         if z is None:
-            # No reference neighbors available at all -- leave unscored
-            # rather than fabricate a z-score.
+            # No reference points exist, so leave the point unscored.
             continue
         p["z_score"] = z
         scored_current_points.append(p)
@@ -236,7 +229,7 @@ def process_file(filepath, plots_dir):
     else:
         data = {"points": points, "anomalies": anomalies}
 
-    # Overwrite in place via temp file, same pattern as the earlier scripts.
+    # Write to a temp file first so a failure cannot corrupt the original.
     dirpath = os.path.dirname(os.path.abspath(filepath))
     fd, tmp_path = tempfile.mkstemp(dir=dirpath, suffix=".json.tmp")
     with os.fdopen(fd, "w") as f:
@@ -250,10 +243,11 @@ def process_file(filepath, plots_dir):
 
 def plot_file(points, filepath, plots_dir):
     """
-    One diagnostic PNG per file: magnitude vs equatorial_phase, marking:
-      - reference vs current (marker shape)
-      - glint points (separate marker, drawn on top, regardless of period)
-      - flagged vs non-flagged current points (color)
+    Save one diagnostic PNG of magnitude against equatorial phase.
+
+    Color separates reference points from current points, and flagged
+    current points from unflagged ones. Glint points use their own marker
+    and sit on top, whatever their period.
     """
     ref_non_glint = [p for p in points if p.get("period") == "reference" and not p.get("glint", False)]
     cur_non_glint = [p for p in points if p.get("period") == "current" and not p.get("glint", False)]
@@ -275,14 +269,14 @@ def plot_file(points, filepath, plots_dir):
             **kwargs,
         )
 
-    # Plot reference/current first, glint last (highest zorder) so glint
-    # markers always sit on top and are never hidden under other points.
+    # Draw glint points last, with the highest zorder, so other points never
+    # hide them.
     scatter(ref_non_glint, marker="o", s=18, c="#39d353", alpha=0.6, label="reference", zorder=2)
     scatter(cur_unflagged, marker="o", s=32, c="#f5e642", label="current (not flagged)", zorder=3)
     scatter(cur_flagged, marker="o", s=60, c="#ff3b3b", linewidths=0.7, label="current (flagged)", zorder=4)
     scatter(glint_pts, marker="x", s=70, c="#00e5ff", linewidths=2.0, label="glint (excluded)", zorder=5)
 
-    ax.invert_yaxis()  # magnitude: lower is brighter, conventional to invert
+    ax.invert_yaxis()  # A lower magnitude is brighter, so brighter points plot higher.
     ax.set_xlabel("Equatorial phase (SEPA, deg)", color="white")
     ax.set_ylabel("Magnitude", color="white")
     ax.set_title(Path(filepath).stem, color="white")

@@ -11,7 +11,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-DATA_DIR = Path("data_json")  # placeholder: edit this path
+DATA_DIR = Path("data_json")  # Root folder for standalone runs. start.py ignores it.
 
 # era: (reference start, reference end = current start, current end), all UTC.
 ERAS = {
@@ -32,7 +32,7 @@ def label(t, ref_start, ref_end, cur_end):
         return "reference"
     if ref_end <= t <= cur_end:
         return "current"
-    return None  # outside both windows
+    return None  # The timestamp is outside both windows.
 
 
 def process_file(path, bounds):
@@ -61,7 +61,7 @@ def run():
     for era, (rs, re_, ce) in ERAS.items():
         bounds = (parse(rs), parse(re_), parse(ce))
         for path in sorted((DATA_DIR / era).iterdir()):
-            if path.suffix == ".json":  # ignore other file types
+            if path.suffix == ".json":  # Skip other file types.
                 process_file(path, bounds)
 
 

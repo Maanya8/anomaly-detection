@@ -4,7 +4,7 @@ Usage:
     python csv_to_json.py <input_dir> <output_dir>
 
 Each CSV row becomes one JSON object. Numeric text becomes a number, except in
-text columns. Hidden folders, such as `.ipynb_checkpoints`, are skipped.
+text columns. The script skips hidden folders, such as `.ipynb_checkpoints`.
 """
 
 import csv
@@ -12,8 +12,8 @@ import json
 import sys
 from pathlib import Path
 
-# Keep these columns as text. Some sensor IDs look like numbers, for example
-# `62889e77` reads as 6.2889e77, so converting them would corrupt the ID.
+# Keep these columns as text. Some sensor IDs look like numbers. For example,
+# Python reads `62889e77` as 6.2889e77, which would corrupt the ID.
 TEXT_COLUMNS = {"timestamp", "sensor"}
 
 
