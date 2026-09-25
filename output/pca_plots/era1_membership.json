@@ -71,7 +71,7 @@
       "cur_cluster": 1,
       "shifted": false,
       "unusual": false,
-      "cur_distance_to_centroid": 1.5938307425593883,
+      "cur_distance_to_centroid": 1.5938307425593943,
       "partial_current_data": true
     },
     {
@@ -89,7 +89,7 @@
       "cur_cluster": 1,
       "shifted": false,
       "unusual": false,
-      "cur_distance_to_centroid": 1.2649114309649367,
+      "cur_distance_to_centroid": 1.2649114309649228,
       "partial_current_data": true
     },
     {
@@ -134,7 +134,7 @@
       "cur_cluster": 0,
       "shifted": true,
       "unusual": true,
-      "cur_distance_to_centroid": 4.218843558699258,
+      "cur_distance_to_centroid": 4.218843558699263,
       "partial_current_data": true
     },
     {
@@ -152,7 +152,7 @@
       "cur_cluster": 1,
       "shifted": false,
       "unusual": false,
-      "cur_distance_to_centroid": 2.927320803192446,
+      "cur_distance_to_centroid": 2.927320803192452,
       "partial_current_data": true
     },
     {
@@ -161,7 +161,7 @@
       "cur_cluster": 0,
       "shifted": false,
       "unusual": false,
-      "cur_distance_to_centroid": 2.777978553134367,
+      "cur_distance_to_centroid": 2.7779785531343686,
       "partial_current_data": true
     },
     {
@@ -215,7 +215,7 @@
       "cur_cluster": 0,
       "shifted": false,
       "unusual": false,
-      "cur_distance_to_centroid": 1.8462725611003246,
+      "cur_distance_to_centroid": 1.8462725611003188,
       "partial_current_data": true
     },
     {
