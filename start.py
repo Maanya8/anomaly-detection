@@ -1,4 +1,4 @@
-"""pipeline.py
+"""start.py
 
 Wraps the satellite anomaly-detection scripts (glint tagging, period
 labeling, kNN scoring, rolling-median scoring, and normal-element-set

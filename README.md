@@ -20,7 +20,7 @@ python split_eras.py <input_file> data_json
 ## Run
 
 ```
-python pipeline.py data_json output
+python start.py data_json output
 ```
 
 - `data_json` — folder with `era1/`, `era2/`, `era3/` subfolders of per-satellite JSON files.
