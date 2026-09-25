@@ -12,6 +12,11 @@ venv\Scripts\activate.bat
 python csv_to_json.py <input_dir> data_json
 ```
 
+- If using one combined .json for input run 
+```
+python split_eras.py <input_file> data_json
+```
+
 ## Run
 
 ```
@@ -37,3 +42,8 @@ python pipeline.py data_json output
 - `output/pca_plots/era*_clustering.png` and `era*_membership.json` — clustering plot and group-membership summary per era.
 - `output/era1_anomalies.json`, `era2_anomalies.json`, `era3_anomalies.json` — merged kNN + rolling-median anomalies per era.
 - `output/pipeline_report.json` — processed/failed counts per stage.
+
+## For one combined final .json
+```
+python combine_eras.py data_json combined.json
+```
