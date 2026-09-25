@@ -1,0 +1,64 @@
+{
+  "reference_point_count": 5,
+  "current_point_count": 0,
+  "no_current_points": true,
+  "points": [
+    {
+      "norad_id": 23,
+      "timestamp": "2025-10-12T08:49:21.060919Z",
+      "equatorial_phase": 62.2623036323293,
+      "magnitude": 16.265492962104613,
+      "magnitude_unc": 0.16682992513634956,
+      "sensor": "fc9b003b",
+      "zeroptd": 27.405341,
+      "glint": false,
+      "period": "reference"
+    },
+    {
+      "norad_id": 23,
+      "timestamp": "2025-10-12T08:49:33.555078Z",
+      "equatorial_phase": 62.30925550206287,
+      "magnitude": 16.420055346543233,
+      "magnitude_unc": 0.15483057264313144,
+      "sensor": "fc9b003b",
+      "zeroptd": 27.393797,
+      "glint": false,
+      "period": "reference"
+    },
+    {
+      "norad_id": 23,
+      "timestamp": "2025-10-12T08:49:39.776730Z",
+      "equatorial_phase": 62.33263253527775,
+      "magnitude": 16.385658193350107,
+      "magnitude_unc": 0.14867763895085231,
+      "sensor": "fc9b003b",
+      "zeroptd": 27.405807000000003,
+      "glint": false,
+      "period": "reference"
+    },
+    {
+      "norad_id": 23,
+      "timestamp": "2025-10-12T08:49:52.225827Z",
+      "equatorial_phase": 62.379401866435586,
+      "magnitude": 16.31952280708303,
+      "magnitude_unc": 0.1482002669397056,
+      "sensor": "fc9b003b",
+      "zeroptd": 27.41706,
+      "glint": false,
+      "period": "reference"
+    },
+    {
+      "norad_id": 23,
+      "timestamp": "2025-10-12T08:49:58.482884Z",
+      "equatorial_phase": 62.40290545997804,
+      "magnitude": 16.405490175461228,
+      "magnitude_unc": 0.15654563461176427,
+      "sensor": "fc9b003b",
+      "zeroptd": 27.405738,
+      "glint": false,
+      "period": "reference"
+    }
+  ],
+  "anomalies": [],
+  "anomalies_median": []
+}

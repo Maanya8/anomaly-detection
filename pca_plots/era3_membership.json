@@ -1,0 +1,240 @@
+{
+  "era": "era3",
+  "k": 2,
+  "satellites": [
+    {
+      "norad_id": 1,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 2.0450147485586188,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 10,
+      "ref_cluster": 1,
+      "cur_cluster": 1,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 1.9473964969033768,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 11,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 3.705603213039263,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 12,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 3.5418742588799597,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 13,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": true,
+      "cur_distance_to_centroid": 5.049858064584325,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 14,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 2.04161631073775,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 15,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": true,
+      "cur_distance_to_centroid": 4.72557682561506,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 16,
+      "ref_cluster": 0,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 17,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 1.5547975386996722,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 18,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 1.5427287226428226,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 19,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 2.5707834162311216,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 20,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 3.442497875712892,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 21,
+      "ref_cluster": 0,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 22,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": true,
+      "cur_distance_to_centroid": 4.6097769785796165,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 24,
+      "ref_cluster": 0,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 25,
+      "ref_cluster": 0,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 26,
+      "ref_cluster": 0,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 27,
+      "ref_cluster": 1,
+      "cur_cluster": 1,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 2.0906807259817026,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 3,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 1.7101520075389465,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 30,
+      "ref_cluster": 0,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 31,
+      "ref_cluster": 0,
+      "cur_cluster": 1,
+      "shifted": true,
+      "unusual": true,
+      "cur_distance_to_centroid": 3.845582681269413,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 4,
+      "ref_cluster": 0,
+      "cur_cluster": 1,
+      "shifted": true,
+      "unusual": false,
+      "cur_distance_to_centroid": 3.6149306307286038,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 5,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 1.6147545390515536,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 6,
+      "ref_cluster": 1,
+      "cur_cluster": 1,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 2.093470064549081,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 7,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 3.1831187715155083,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 8,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 1.7213940536600765,
+      "partial_current_data": false
+    }
+  ]
+}

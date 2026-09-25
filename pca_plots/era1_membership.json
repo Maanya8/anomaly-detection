@@ -1,0 +1,240 @@
+{
+  "era": "era1",
+  "k": 2,
+  "satellites": [
+    {
+      "norad_id": 0,
+      "ref_cluster": 0,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 1,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 10,
+      "ref_cluster": 0,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 12,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 13,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 14,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 15,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 16,
+      "ref_cluster": 1,
+      "cur_cluster": 1,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 1.5938307425593883,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 17,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 18,
+      "ref_cluster": 1,
+      "cur_cluster": 1,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 1.2649114309649367,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 19,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 20,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 21,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 22,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 24,
+      "ref_cluster": 1,
+      "cur_cluster": 0,
+      "shifted": true,
+      "unusual": true,
+      "cur_distance_to_centroid": 4.218843558699258,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 25,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 26,
+      "ref_cluster": 1,
+      "cur_cluster": 1,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 2.927320803192446,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 27,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 2.777978553134367,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 3,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 30,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 31,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 4,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 5,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 6,
+      "ref_cluster": 0,
+      "cur_cluster": 0,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": 1.8462725611003246,
+      "partial_current_data": true
+    },
+    {
+      "norad_id": 7,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    },
+    {
+      "norad_id": 8,
+      "ref_cluster": 1,
+      "cur_cluster": null,
+      "shifted": false,
+      "unusual": false,
+      "cur_distance_to_centroid": null,
+      "partial_current_data": false
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "reference_point_count": 6,
+  "current_point_count": 0,
+  "no_current_points": true,
+  "points": [
+    {
+      "norad_id": 2,
+      "timestamp": "2025-10-09T13:42:07.011909Z",
+      "equatorial_phase": 8.440599849994785,
+      "magnitude": 16.026524000357664,
+      "magnitude_unc": 0.11167819661867755,
+      "sensor": "0e087ec5",
+      "zeroptd": 27.265919000000004,
+      "glint": true,
+      "period": "reference"
+    },
+    {
+      "norad_id": 2,
+      "timestamp": "2025-10-09T13:42:13.178844Z",
+      "equatorial_phase": 8.465136225834085,
+      "magnitude": 15.90620356646717,
+      "magnitude_unc": 0.10910881029504446,
+      "sensor": "0e087ec5",
+      "zeroptd": 27.247386,
+      "glint": true,
+      "period": "reference"
+    },
+    {
+      "norad_id": 2,
+      "timestamp": "2025-10-09T13:42:25.300283Z",
+      "equatorial_phase": 8.513380064479536,
+      "magnitude": 15.85340762435267,
+      "magnitude_unc": 0.09805227032557685,
+      "sensor": "0e087ec5",
+      "zeroptd": 27.242756999999997,
+      "glint": true,
+      "period": "reference"
+    },
+    {
+      "norad_id": 2,
+      "timestamp": "2025-10-09T13:42:31.447262Z",
+      "equatorial_phase": 8.537853624183251,
+      "magnitude": 15.850817336263978,
+      "magnitude_unc": 0.09859559081926535,
+      "sensor": "0e087ec5",
+      "zeroptd": 27.271743999999998,
+      "glint": true,
+      "period": "reference"
+    },
+    {
+      "norad_id": 2,
+      "timestamp": "2025-10-09T13:42:37.679857Z",
+      "equatorial_phase": 8.562673825487684,
+      "magnitude": 15.792068383227528,
+      "magnitude_unc": 0.10521292852591833,
+      "sensor": "0e087ec5",
+      "zeroptd": 27.253655000000002,
+      "glint": true,
+      "period": "reference"
+    },
+    {
+      "norad_id": 2,
+      "timestamp": "2025-10-09T13:42:44.086260Z",
+      "equatorial_phase": 8.58819228298624,
+      "magnitude": 15.6133384376853,
+      "magnitude_unc": 0.08626021493713078,
+      "sensor": "0e087ec5",
+      "zeroptd": 27.266545,
+      "glint": true,
+      "period": "reference"
+    }
+  ],
+  "anomalies": [],
+  "anomalies_median": []
+}
