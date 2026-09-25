@@ -44,6 +44,7 @@ import copy
 import json
 import logging
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -192,8 +193,13 @@ class AnomalyDetectionPipeline:
         matches time order.
 
         A collapsed entry keeps the wider equatorial_phase and timestamp
-        range, the higher of the two scores (the stronger signal), the
-        summed point count, and the set of methods that flagged it.
+        range, the higher of the two scores (the stronger signal), and the
+        set of methods that flagged it. n_points is left as whichever
+        input entry's count happened to survive the merge -- it is wrong
+        the moment two entries collapse, because a point both methods
+        flagged would count once per method. _write_era_summaries()
+        overwrites it with an exact count read back from the scored file,
+        so a value here is never the one that reaches the output.
         """
         tagged = [{**copy.deepcopy(a), "methods": ["knn"]} for a in knn_list]
         tagged += [{**copy.deepcopy(a), "methods": ["rolling_median"]} for a in median_list]
@@ -213,7 +219,6 @@ class AnomalyDetectionPipeline:
                     current["equatorial_phase"][0] = min(current["equatorial_phase"][0], a["equatorial_phase"][0])
                     current["equatorial_phase"][1] = max(current["equatorial_phase"][1], a["equatorial_phase"][1])
                     current["score"] = max(current["score"], a["score"])
-                    current["n_points"] += a["n_points"]
                     current["methods"] = sorted(set(current["methods"]) | set(a["methods"]))
                 else:
                     if current is not None:
@@ -224,9 +229,35 @@ class AnomalyDetectionPipeline:
         merged.sort(key=lambda a: a["score"], reverse=True)
         return merged
 
+    def _count_flagged_points(self, era, anomaly):
+        """Count the points actually flagged within one merged anomaly's
+        time range, by either method, each counted once.
+
+        merge_anomalies() cannot do this itself: kNN and rolling-median
+        anomalies only carry a point count and a timestamp range, not
+        which points those are, so summing the two counts double-counts
+        any point both methods flagged. This re-reads the satellite's
+        already-scored file -- every point there carries kNN's `flagged`
+        and rolling-median's `flagged_median` -- and counts each point at
+        most once regardless of which method (or both) flagged it.
+        """
+        path = self.data_dir / era / f"{anomaly['norad_id']}.json"
+        with open(path) as f:
+            data = json.load(f)
+        points = data["points"] if isinstance(data, dict) else data
+        lo, hi = anomaly["timestamp"]
+        return sum(
+            1 for p in points
+            if p.get("period") == "current" and not p.get("glint")
+            and lo <= p["timestamp"] <= hi
+            and (p.get("flagged") or p.get("flagged_median"))
+        )
+
     def _write_era_summaries(self):
         for era in ERAS:
             merged = self.merge_anomalies(self._knn_anomalies[era], self._median_anomalies[era])
+            for a in merged:
+                a["n_points"] = self._count_flagged_points(era, a)
             out_path = self.output_dir / f"{era}_anomalies.json"
             out_path.write_text(json.dumps(merged, indent=2, default=str))
             log.info("%s: wrote %d merged anomalies to %s", era, len(merged), out_path)
@@ -266,7 +297,9 @@ class AnomalyDetectionPipeline:
 def _check_merge_anomalies():
     """Same-satellite, overlapping-time anomalies from the two methods
     collapse into one entry with the union range and the higher score;
-    a non-overlapping anomaly stays separate."""
+    a non-overlapping anomaly stays separate. n_points is not checked
+    here -- merge_anomalies() no longer computes it; see
+    _check_count_flagged_points for that."""
     knn_list = [
         {"norad_id": 1, "equatorial_phase": [-80.0, -70.0], "timestamp": ["2025-11-07 04:00:00", "2025-11-07 04:10:00"], "score": 0.9, "n_points": 4},
         {"norad_id": 2, "equatorial_phase": [10.0, 20.0], "timestamp": ["2025-11-07 05:00:00", "2025-11-07 05:05:00"], "score": 0.7, "n_points": 3},
@@ -284,9 +317,41 @@ def _check_merge_anomalies():
     assert sat1["equatorial_phase"] == [-80.0, -65.0]
     assert sat1["timestamp"] == ["2025-11-07 04:00:00", "2025-11-07 04:15:00"]
     assert sat1["score"] == 0.95
-    assert sat1["n_points"] == 9
     assert set(sat1["methods"]) == {"knn", "rolling_median"}
     assert len(by_norad[2]) == 2, "non-overlapping anomalies for norad_id 2 should stay separate"
+    print("check passed")
+
+
+def _check_count_flagged_points():
+    """A point flagged by both kNN and rolling-median counts once, not
+    twice -- the exact bug this method exists to avoid (see its
+    docstring)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        era_dir = tmp / "era1"
+        era_dir.mkdir(parents=True)
+        points = [
+            # Flagged by kNN only.
+            {"period": "current", "glint": False, "timestamp": "2025-11-07T04:00:00Z", "flagged": True, "flagged_median": False},
+            # Flagged by rolling-median only.
+            {"period": "current", "glint": False, "timestamp": "2025-11-07T04:01:00Z", "flagged": False, "flagged_median": True},
+            # Flagged by both -- must count once.
+            {"period": "current", "glint": False, "timestamp": "2025-11-07T04:02:00Z", "flagged": True, "flagged_median": True},
+            # Not flagged by either.
+            {"period": "current", "glint": False, "timestamp": "2025-11-07T04:03:00Z", "flagged": False, "flagged_median": False},
+            # Outside the anomaly's time range -- must not be counted.
+            {"period": "current", "glint": False, "timestamp": "2025-11-07T05:00:00Z", "flagged": True, "flagged_median": True},
+            # Glint -- must not be counted even though flagged.
+            {"period": "current", "glint": True, "timestamp": "2025-11-07T04:00:30Z", "flagged": True, "flagged_median": True},
+            # Reference period -- must not be counted.
+            {"period": "reference", "glint": False, "timestamp": "2025-11-07T04:00:15Z", "flagged": True, "flagged_median": True},
+        ]
+        (era_dir / "1.json").write_text(json.dumps({"points": points}))
+
+        pipeline = AnomalyDetectionPipeline(tmp, tmp / "output")
+        anomaly = {"norad_id": 1, "timestamp": ["2025-11-07T04:00:00Z", "2025-11-07T04:03:00Z"]}
+        count = pipeline._count_flagged_points("era1", anomaly)
+        assert count == 3, f"expected 3 unique flagged points, got {count}"
     print("check passed")
 
 
@@ -299,6 +364,7 @@ def main():
 
     if args.check:
         _check_merge_anomalies()
+        _check_count_flagged_points()
         return
 
     if not args.data_dir or not args.output_dir:
